@@ -203,6 +203,25 @@ class S3FileSystem(ObjectFileSystem):
                     )
                 additional[grant_key] = config[grant_option]
 
+        additional["StorageClass"] = config.get("storage_class")
+        additional["Tagging"] = config.get("object_tags")
+
+        if config.get("requester_pays"):
+            additional["RequestPayer"] = "requester"
+
+        if config.get("extra_s3_args"):
+            import json
+
+            try:
+                extra = json.loads(config["extra_s3_args"])
+            except json.JSONDecodeError as exc:
+                raise ConfigError(
+                    f"`extra_s3_args` is not valid JSON: {exc}"
+                ) from exc
+            if not isinstance(extra, dict):
+                raise ConfigError("`extra_s3_args` must be a JSON object")
+            additional.update(extra)
+
         # config kwargs
         session_config = login_info["config_kwargs"]
         session_config["s3"] = self._load_aws_config_file(login_info["profile"])
